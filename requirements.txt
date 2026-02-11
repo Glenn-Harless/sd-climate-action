@@ -3,3 +3,4 @@ streamlit
 plotly
 pyarrow
 pydeck
+pandas>=2.0

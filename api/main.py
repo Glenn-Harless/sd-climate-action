@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
 
 from api import queries
 from api.models import (
@@ -30,6 +31,7 @@ app = FastAPI(
     ),
     version="0.1.0",
 )
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
 @app.get("/")
@@ -146,10 +148,9 @@ def solar_map(
 def energy_consumption(
     year_min: int | None = Query(None, description="Start year"),
     year_max: int | None = Query(None, description="End year"),
-    zip_code: str | None = Query(None, description="Filter by zip code"),
 ):
-    """Citywide electricity and gas consumption trends (SDG&E data)."""
-    return queries.get_energy_consumption(year_min, year_max, zip_code)
+    """Citywide electricity and gas consumption trends (SDG&E data). Zip-level filtering not available."""
+    return queries.get_energy_consumption(year_min, year_max)
 
 
 @app.get("/energy-vs-solar", response_model=list[EnergyVsSolar])

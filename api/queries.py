@@ -284,13 +284,12 @@ def get_solar_map_data(
 def get_energy_consumption(
     year_min: int | None = None,
     year_max: int | None = None,
-    zip_code: str | None = None,
 ) -> list[dict]:
-    """Electricity + gas consumption trends from SDG&E data."""
+    """Electricity + gas consumption trends from SDG&E data (citywide aggregates, zip-level filtering not available)."""
     pq = _pq("energy_trends")
     if not Path(f"{_AGG}/energy_trends.parquet").exists():
         return []
-    w = _where(year_min, year_max, zip_code=zip_code, has_category=False, has_era=False, has_zip=False)
+    w = _where(year_min, year_max, has_category=False, has_era=False, has_zip=False)
     return _run(f"""
         SELECT year, quarter, customer_class,
                total_kwh, elec_customers,
