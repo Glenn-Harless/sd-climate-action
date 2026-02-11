@@ -1,0 +1,11 @@
+data/raw/
+data/processed/*
+!data/processed/climate_permits.parquet
+!data/processed/energy_consumption.parquet
+data/aggregated/*
+!data/aggregated/*.parquet
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.claude/

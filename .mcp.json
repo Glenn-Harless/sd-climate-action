@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "sd-climate-action": {
+      "command": "uv",
+      "args": ["run", "python", "-m", "api.mcp_server"]
+    }
+  }
+}
