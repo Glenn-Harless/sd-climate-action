@@ -3,6 +3,8 @@
 ## Overview
 Assess whether San Diego's Climate Action Plan policies are translating into measurable action. Track solar permit adoption, energy trends, and building efficiency across neighborhoods.
 
+**Live Dashboard**: https://sd-climate-action.streamlit.app/
+
 ## Key Questions
 - Is solar adoption accelerating after the expedited permit policy?
 - Which neighborhoods lead or lag in solar adoption?
