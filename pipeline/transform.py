@@ -12,11 +12,9 @@ _SDGE = _RAW / "sdge"
 _PROCESSED = _ROOT / "data" / "processed"
 _AGG = _ROOT / "data" / "aggregated"
 
-# Raw permit CSVs
-_SET1_ACTIVE = str(_RAW / "set1_active.csv")
-_SET1_CLOSED = str(_RAW / "set1_closed.csv")
-_SET2_ACTIVE = str(_RAW / "set2_active.csv")
-_SET2_CLOSED = str(_RAW / "set2_closed.csv")
+# Raw permit CSVs (consolidated dataset, split by approval status)
+_ACTIVE = str(_RAW / "active.csv")
+_CLOSED = str(_RAW / "closed.csv")
 
 _PERMITS_PARQUET = str(_PROCESSED / "climate_permits.parquet")
 _ENERGY_PARQUET = str(_PROCESSED / "energy_consumption.parquet")
@@ -40,87 +38,45 @@ def transform() -> None:
 def _transform_permits(con: duckdb.DuckDBPyConnection) -> None:
     """Load, normalize, and export climate-focused permit data."""
 
-    # ── Load Set 1 (legacy system) ──
-    print("  Loading Set 1 (legacy) ...")
+    # ── Load consolidated permits (active + closed) ──
+    print("  Loading permits (active + closed) ...")
     con.execute(f"""
-        CREATE OR REPLACE TABLE set1_raw AS
+        CREATE OR REPLACE TABLE permits_raw AS
         SELECT * FROM read_csv(
-            ['{_SET1_ACTIVE}', '{_SET1_CLOSED}'],
+            ['{_ACTIVE}', '{_CLOSED}'],
             union_by_name = true,
             auto_detect = true,
+            all_varchar = true,
             ignore_errors = true
         )
     """)
-    row_count_1 = con.execute("SELECT COUNT(*) FROM set1_raw").fetchone()[0]
-    print(f"    Set 1 rows: {row_count_1:,}")
+    raw_count = con.execute("SELECT COUNT(*) FROM permits_raw").fetchone()[0]
+    print(f"    Raw rows: {raw_count:,}")
 
-    con.execute("""
-        CREATE OR REPLACE TABLE set1 AS
-        SELECT
-            CAST(APPROVAL_ID AS VARCHAR)        AS approval_id,
-            CAST(PROJECT_ID AS VARCHAR)         AS project_id,
-            CAST(JOB_ID AS VARCHAR)             AS job_id,
-            TRIM(ADDRESS_JOB)                   AS address,
-            TRIM(CAST(JOB_APN AS VARCHAR))      AS apn,
-            TRY_CAST(LAT_JOB AS DOUBLE)         AS lat,
-            TRY_CAST(LNG_JOB AS DOUBLE)         AS lng,
-            TRIM(APPROVAL_TYPE)                 AS approval_type,
-            TRIM(APPROVAL_STATUS)               AS approval_status,
-            TRY_CAST(DATE_APPROVAL_CREATE AS DATE)  AS date_approval_create,
-            TRY_CAST(DATE_APPROVAL_ISSUE AS DATE)   AS date_approval_issue,
-            TRY_CAST(DATE_APPROVAL_EXPIRE AS DATE)  AS date_approval_expire,
-            TRY_CAST(DATE_APPROVAL_CLOSE AS DATE)   AS date_approval_close,
-            TRY_CAST(APPROVAL_VALUATION AS DOUBLE)  AS valuation,
-            'legacy'                            AS source_system
-        FROM set1_raw
-    """)
-
-    # ── Load Set 2 (current system) ──
-    print("  Loading Set 2 (current) ...")
-    con.execute(f"""
-        CREATE OR REPLACE TABLE set2_raw AS
-        SELECT * FROM read_csv(
-            ['{_SET2_ACTIVE}', '{_SET2_CLOSED}'],
-            union_by_name = true,
-            auto_detect = true,
-            ignore_errors = true
-        )
-    """)
-    row_count_2 = con.execute("SELECT COUNT(*) FROM set2_raw").fetchone()[0]
-    print(f"    Set 2 rows: {row_count_2:,}")
-
-    con.execute("""
-        CREATE OR REPLACE TABLE set2 AS
-        SELECT
-            CAST(APPROVAL_ID AS VARCHAR)        AS approval_id,
-            CAST(PROJECT_ID AS VARCHAR)         AS project_id,
-            CAST(JOB_ID AS VARCHAR)             AS job_id,
-            TRIM(ADDRESS_JOB)                   AS address,
-            TRIM(CAST(JOB_APN AS VARCHAR))      AS apn,
-            TRY_CAST(LAT_JOB AS DOUBLE)         AS lat,
-            TRY_CAST(LNG_JOB AS DOUBLE)         AS lng,
-            TRIM(APPROVAL_TYPE)                 AS approval_type,
-            TRIM(APPROVAL_STATUS)               AS approval_status,
-            TRY_CAST(DATE_APPROVAL_CREATE AS DATE)  AS date_approval_create,
-            TRY_CAST(DATE_APPROVAL_ISSUE AS DATE)   AS date_approval_issue,
-            TRY_CAST(DATE_APPROVAL_EXPIRE AS DATE)  AS date_approval_expire,
-            TRY_CAST(DATE_APPROVAL_CLOSE AS DATE)   AS date_approval_close,
-            TRY_CAST(APPROVAL_VALUATION AS DOUBLE)  AS valuation,
-            'current'                           AS source_system
-        FROM set2_raw
-    """)
-
-    # ── Union + derive climate fields ──
-    print("  Unioning sets + deriving climate fields ...")
+    # ── Normalize columns + derive climate fields ──
+    print("  Normalizing + deriving climate fields ...")
     con.execute("""
         CREATE OR REPLACE TABLE permits_union AS
-        SELECT * FROM set1
-        UNION ALL
-        SELECT * FROM set2
+        SELECT
+            CAST(APPROVAL_ID AS VARCHAR)        AS approval_id,
+            CAST(PROJECT_ID AS VARCHAR)         AS project_id,
+            CAST(JOB_ID AS VARCHAR)             AS job_id,
+            TRIM(GIS_ADDRESS)                   AS address,
+            TRIM(CAST(GIS_APN AS VARCHAR))      AS apn,
+            TRY_CAST(GIS_LATITUDE AS DOUBLE)    AS lat,
+            TRY_CAST(GIS_LONGITUDE AS DOUBLE)   AS lng,
+            TRIM(APPROVAL_TYPE)                 AS approval_type,
+            TRIM(APPROVAL_STATUS)               AS approval_status,
+            TRY_CAST(APPROVAL_CREATE_DATE AS DATE)  AS date_approval_create,
+            TRY_CAST(APPROVAL_ISSUE_DATE AS DATE)   AS date_approval_issue,
+            TRY_CAST(APPROVAL_EXPIRE_DATE AS DATE)  AS date_approval_expire,
+            TRY_CAST(APPROVAL_CLOSE_DATE AS DATE)   AS date_approval_close,
+            TRY_CAST(APPROVAL_VALUATION AS DOUBLE)  AS valuation
+        FROM permits_raw
     """)
 
     total_raw = con.execute("SELECT COUNT(*) FROM permits_union").fetchone()[0]
-    print(f"    Union total: {total_raw:,}")
+    print(f"    Normalized total: {total_raw:,}")
 
     con.execute("""
         CREATE OR REPLACE TABLE permits AS

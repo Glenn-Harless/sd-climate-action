@@ -1,8 +1,6 @@
 name: Refresh Climate Data
 
 on:
-  schedule:
-    - cron: "30 8 1 * *"  # Monthly 1st at 8:30 UTC (12:30 AM PST)
   workflow_dispatch: {}
 
 jobs:
