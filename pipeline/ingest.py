@@ -12,13 +12,15 @@ RAW_DIR = _ROOT / "data" / "raw"
 SDGE_DIR = RAW_DIR / "sdge"
 
 # ── Permit sources (same as sd-housing-permits) ──
+# SD consolidated the legacy set1/set2 permit datasets into a single dataset
+# split by approval status (active/closed). The old set1/set2 URLs all 301 to
+# these two files, so we download only the two distinct files to avoid
+# double-counting.
 
 PERMIT_SOURCES: dict[str, str] = {
-    "set1_active": "https://seshat.datasd.org/development_permits_set1/permits_set1_active_datasd.csv",
-    "set1_closed": "https://seshat.datasd.org/development_permits_set1/permits_set1_closed_datasd.csv",
-    "set2_active": "https://seshat.datasd.org/development_permits_set2/permits_set2_active_datasd.csv",
-    "set2_closed": "https://seshat.datasd.org/development_permits_set2/permits_set2_closed_datasd.csv",
-    "tags": "https://seshat.datasd.org/development_permits_tags/permits_project_tags_datasd.csv",
+    "active": "https://seshat.datasd.org/development_permits/approvals_active_datasd.csv",
+    "closed": "https://seshat.datasd.org/development_permits/approvals_closed_datasd.csv",
+    "tags": "https://seshat.datasd.org/development_projects_tags/permits_project_tags_datasd.csv",
 }
 
 # ── SDG&E energy data ──
